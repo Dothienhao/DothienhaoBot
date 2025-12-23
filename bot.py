@@ -5,7 +5,6 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 TOKEN = '8493795583:AAE6hfwY9PpGuCiFWqe91Xjh5hDCRau4XSM'  # Thay bằng token thật
 bot = telebot.TeleBot(TOKEN)
 
-# Danh sách IPA, key là số nút, value là đường dẫn file IPA trên máy/host
 IPA_FILES = {
     '1': 'ipa1.ipa',   # File ipa1.ipa phải cùng thư mục hoặc đường dẫn đầy đủ
     '2': 'ipa2.ipa',
