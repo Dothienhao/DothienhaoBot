@@ -1,90 +1,43 @@
 import os
-import sys
-import logging
 from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters, CommandHandler
-
-# Thay bằng token bot của bạn (lấy từ BotFather)
-TOKEN = "8493795583:AAE6hfwY9PpGuCiFWqe91Xjh5hDCRau4XSM"
-
-# Thay bằng user ID của bạn (chủ bot). Lấy bằng cách gửi tin nhắn cho bot và xem log.
-ADMIN_ID = 123456789  # <-- Thay thành ID thật của bạn
-
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Bot sẵn sàng! Gửi tin nhắn để echo, gửi file để upload lại, hoặc (nếu bạn là admin) gửi file bot.py mới để update code.")
+    await update.message.reply_text(
+        'Xin chào! Bot đang chạy trên Render.com.\n'
+        'Gửi tin nhắn để echo.\n'
+        'Gửi file để bot nhận và lưu.\n'
+        'Dùng /update + gửi file bot.py mới để tự update code.'
+    )
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.text:
-        await update.message.reply_text(f"Echo: {update.message.text}")
+    await update.message.reply_text(update.message.text)
 
-async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    message = update.message
-    chat_id = message.chat_id
+async def receive_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message.document:
+        file = await update.message.document.get_file()
+        await file.download_to_drive(custom_path=f"./downloads/{update.message.document.file_name}")
+        await update.message.reply_text(f'Đã lưu file: {update.message.document.file_name}')
+    else:
+        await update.message.reply_text('Gửi một file đi!')
 
-    # Xử lý document (file chung)
-    if message.document:
-        file = await message.document.get_file()
-        file_path = f"downloaded_{message.document.file_name}"
-        await file.download_to_drive(file_path)
-        await message.reply_document(document=open(file_path, 'rb'), caption="File đã được upload lại trực tiếp!")
-        os.remove(file_path)  # Xóa file tạm
+async def update_bot(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message.document and update.message.document.file_name == 'bot.py':
+        file = await update.message.document.get_file()
+        await file.download_to_drive(custom_path='./bot.py')
+        await update.message.reply_text('Đã update file bot.py thành công!\nBot sẽ tự restart trong vài giây nhờ Render.')
+    else:
+        await update.message.reply_text('Gửi đúng file tên "bot.py" kèm lệnh /update nhé!')
 
-    # Xử lý photo (lấy ảnh chất lượng cao nhất)
-    elif message.photo:
-        file = await message.photo[-1].get_file()
-        file_path = "downloaded_photo.jpg"
-        await file.download_to_drive(file_path)
-        await message.reply_photo(photo=open(file_path, 'rb'), caption="Photo đã được upload lại!")
-        os.remove(file_path)
-
-    # Xử lý video
-    elif message.video:
-        file = await message.video.get_file()
-        file_path = "downloaded_video.mp4"
-        await file.download_to_drive(file_path)
-        await message.reply_video(video=open(file_path, 'rb'), caption="Video đã được upload lại!")
-        os.remove(file_path)
-
-    # Có thể thêm các loại media khác nếu cần
-
-async def handle_update_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id != ADMIN_ID:
-        await update.message.reply_text("Bạn không có quyền update code!")
-        return
-
-    if not update.message.document or not update.message.document.file_name == "bot.py":
-        await update.message.reply_text("Chỉ chấp nhận file tên đúng là 'bot.py' để update!")
-        return
-
-    # Tải file mới về
-    file = await update.message.document.get_file()
-    await file.download_to_drive("bot_new.py")
-
-    # Ghi đè file hiện tại
-    os.replace("bot_new.py", __file__)  # __file__ là đường dẫn file hiện tại (bot.py)
-
-    await update.message.reply_text("Code đã được update! Đang restart bot...")
-
-    # Restart bot (thay thế process hiện tại)
-    python = sys.executable
-    os.execv(python, [python] + sys.argv)
-
-async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
-    logging.error(f"Error: {context.error}")
-
-def main():
+if __name__ == '__main__':
+    TOKEN = os.getenv('BOT_TOKEN')  # Lấy token từ environment variable
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))  # Echo text
-    app.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO | filters.VIDEO, handle_file))  # Upload file lại
-    app.add_handler(MessageHandler(filters.Document.FileExtension("py"), handle_update_code))  # Chỉ admin update code
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+    app.add_handler(MessageHandler(filters.Document.ALL, receive_file))
+    app.add_handler(CommandHandler("update", update_bot))
 
-    app.add_error_handler(error_handler)
-
-    app.run_polling()
-
-if __name__ == '__main__':
-    main()
+    # Render yêu cầu port từ environment
+    port = int(os.environ.get('PORT', 10000))
+    app.run_polling()  # Dùng polling vì dễ nhất trên Render miễn phí
