@@ -93,9 +93,9 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     logger.error('Lỗi: %s', context.error)
 
 if __name__ == '__main__':
-    TOKEN = os.getenv('KEYTOKEN')
+    TOKEN = os.getenv('BOT_TOKEN')
     if not TOKEN:
-        logger.error("KEYTOKEN không tồn tại!")
+        logger.error("BOT_TOKEN không tồn tại!")
         exit(1)
 
     app = ApplicationBuilder().token(TOKEN).build()
