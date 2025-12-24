@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 # === CHỈNH SỬA 2 DÒNG NÀY THÔI ===
 IPA_FILE_PATH = './your_app.ipa'    # ← Đổi thành tên file .ipa thật của bạn, ví dụ './GameMod.ipa'
-ADMIN_USER_ID = 123456789          # ← Đổi thành ID Telegram của bạn (lấy từ @userinfobot)
+ADMIN_USER_ID = 961574571          # ← Đổi thành ID Telegram của bạn (lấy từ @userinfobot)
 # =================================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
